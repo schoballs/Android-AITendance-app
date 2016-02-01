@@ -1,6 +1,8 @@
-package com.sourcey.materiallogindemo;
+package com.ait.aitendance;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -11,6 +13,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import butterknife.ButterKnife;
 import butterknife.Bind;
@@ -54,10 +64,12 @@ public class LoginActivity extends AppCompatActivity {
     public void login() {
         Log.d(TAG, "Login");
 
-        if (!validate()) {
+
+        /* TURN THIS BACK ON BEFORE RELEASE TO VALIDATE FIELD */
+        /*if (!validate()) {
             onLoginFailed();
             return;
-        }
+        }*/
 
         _loginButton.setEnabled(false);
 
@@ -93,10 +105,10 @@ public class LoginActivity extends AppCompatActivity {
 
                 // TODO: Implement successful signup logic here
                 // By default we just finish the Activity and log them in automatically
-                if(_emailText.getText().toString() == Femail && _passwordText.getText().toString() == Fpassword)
-                {
+                //if(_passwordText.getText().toString() == Femail && _confPwdText.getText().toString() == Fpassword)
+               // {
                     this.finish();
-                }
+                //}
             }
         }
     }
@@ -139,5 +151,78 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         return valid;
+    }
+
+    public class LoginTask extends AsyncTask<Void, Void, Void>
+    {
+        private boolean success = false;
+        private String error = "";
+
+        private Activity CurrentActivity;
+
+        public LoginTask(Activity CurrentActivity)
+        {
+            this.CurrentActivity = CurrentActivity;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            //Note, probably should pass these next 2 values in at constructor
+            //too dependant on a particular layout
+            EditText userNameET = (EditText) findViewById(R.id.input_email);
+            EditText passwordET = (EditText) findViewById(R.id.input_password);
+
+            JSONParser jsonParser = new JSONParser();
+
+            List<NameValuePair> parameters = new ArrayList<NameValuePair>();
+            parameters.add(new BasicNameValuePair("username",userNameET.getText().toString()));
+            parameters.add(new BasicNameValuePair("password", passwordET.getText().toString()));
+            JSONObject json = jsonParser.getJSONFromUrl("http://androidapi.mattconcepts.com/login.php", parameters);
+            if(json != null)
+            {
+                try{
+                    if(json.getString("success")!=null)
+                    {
+                        String result = json.getString("success");
+                        if(Integer.parseInt(result) == 1)
+                        {
+                            success = true;
+                        }
+                        else
+                        {
+                            success = false;
+                            error = json.getString("error");
+                        }
+                    }
+                }
+                catch(JSONException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+            else
+            {
+                success = false;
+                error = "no response";
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            //super.onPostExecute(aVoid);
+            if(success)
+            {
+                //Toast.makeText(CurrentActivity, "Login Successful!", Toast.LENGTH_SHORT).show();
+
+                //go to next screen
+                //Intent nextScreen = new Intent(CurrentActivity, MainActivity2Activity.class);
+                //startActivity(nextScreen);
+            }
+            else
+            {
+                Toast.makeText(CurrentActivity, "Failed: "+error, Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }
